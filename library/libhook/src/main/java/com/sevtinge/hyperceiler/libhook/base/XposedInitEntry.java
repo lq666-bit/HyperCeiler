@@ -362,6 +362,8 @@ public class XposedInitEntry extends XposedModule {
         ModuleMatcher matcher = new ModuleMatcher(context);
 
         dataMap.forEach((className, data) -> {
+            // === 自用精简:只保留状态栏相关 Hook,其他模块全部跳过 ===
+            if (!isStatusBarHookClass(className)) return;
             if (!matcher.shouldLoad(data, packageName)) return;
             try {
                 Class<?> clazz = classLoader.loadClass(className);
@@ -373,6 +375,33 @@ public class XposedInitEntry extends XposedModule {
                 BaseLoad.recordHotReloadInitializationFailure(className, e);
             }
         });
+    }
+
+    /**
+     * 自用精简过滤器:返回 true 表示这个 Hook 类与状态栏相关,允许加载。
+     *
+     * <p>保留范围:
+     * <ul>
+     *   <li>所有 {@code rules.systemui.statusbar.*} 子包下的类(实际的状态栏规则)</li>
+     *   <li>{@code appbase.systemui.StatusBarHook} / {@code StatusBarActionBootstrap} /
+     *       {@code StatusBarActionBridge}(状态栏规则的共享入口与桥接)</li>
+     * </ul>
+     *
+     * <p>非状态栏相关的 hook(锁屏/控制中心/安全中心/桌面等)全部跳过,实现"只裁剪运行时"。
+     * 修改自 <a href="https://github.com/ReChronoRain/HyperCeiler">HyperCeiler</a>。</p>
+     */
+    private static boolean isStatusBarHookClass(String className) {
+        // 状态栏规则全部保留(含子包:battery/clock/icon/island/mobile/network ...)
+        if (className.startsWith("com.sevtinge.hyperceiler.libhook.rules.systemui.statusbar.")) {
+            return true;
+        }
+        // 状态栏入口与桥接(appbase 中的状态栏相关基类)
+        if (className.equals("com.sevtinge.hyperceiler.libhook.appbase.systemui.StatusBarHook")
+            || className.equals("com.sevtinge.hyperceiler.libhook.appbase.systemui.StatusBarActionBootstrap")
+            || className.equals("com.sevtinge.hyperceiler.libhook.appbase.systemui.StatusBarActionBridge")) {
+            return true;
+        }
+        return false;
     }
 
     private ModuleMatcher.MatchContext buildMatchContext(String packageName, HashMap<String, DataBase> dataMap) {
