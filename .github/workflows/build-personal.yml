@@ -2,7 +2,8 @@
 # - 只构建 Debug APK(走 debug 签名,无需任何 signing.properties)
 # - APK 内代码完整保留,但运行时只加载状态栏相关 Hook(由 XposedInitEntry.java 中的过滤逻辑保证)
 # - 需要 GitHub Secrets: GPR_USER(lq666-bit)、GPR_KEY(带 read:packages 的 PAT)
-# - 凭据通过环境变量传给 Gradle,不创建 signing.properties(避免触发文件加载逻辑)
+# - 凭据通过 GIT_ACTOR/GIT_TOKEN 环境变量传给 Gradle(settings.gradle.kts 第 7-11 行的优先级最高)
+# - 不创建 signing.properties(避免触发文件加载逻辑)
 # - 触发方式:push 到 main 分支 或 手动触发
 name: Build Personal (StatusBar Only)
 
@@ -40,9 +41,10 @@ jobs:
         run: rm -f signing.properties
 
       - name: 构建 Debug APK
+        # 关键:把 Secrets 里的 GPR_USER/GPR_KEY 映射成 gradle 期望的 GIT_ACTOR/GIT_TOKEN
         env:
-          GPR_USER: ${{ secrets.GPR_USER }}
-          GPR_KEY: ${{ secrets.GPR_KEY }}
+          GIT_ACTOR: ${{ secrets.GPR_USER }}
+          GIT_TOKEN: ${{ secrets.GPR_KEY }}
         run: ./gradlew assembleDebug
 
       - name: 重命名 APK
