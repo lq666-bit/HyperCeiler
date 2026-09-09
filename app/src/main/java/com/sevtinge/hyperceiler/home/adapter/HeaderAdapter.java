@@ -273,21 +273,19 @@ public class HeaderAdapter extends RecyclerView.Adapter<HeaderAdapter.HeaderView
     }
 
     private void setIconAndTitle(HeaderViewHolder holder, Header header) {
-        long id = header.id;
-        if (holder == null || id == R.id.various || TextUtils.isEmpty(header.summary)) return;
-        // 快速滚动时跳过异步图标加载，停止后会通过 notifyDataSetChanged 重新 bind
-        if (mIsScrolling) return;
-        String packageName = header.summary.toString();
-        int headerIconSize = mContext.getResources().getDimensionPixelSize(R.dimen.header_icon_size);
-        // 精准更新 UI
-        IconTitleLoader.load(mContext, packageName, headerIconSize, (info) -> {
-            // 检查 ViewHolder 是否已被复用
-            if (holder.getBindingAdapterPosition() != RecyclerView.NO_POSITION) {
-                holder.icon.setImageDrawable(info.icon());
-                if (id != R.id.system_framework) {
-                    holder.title.setText(info.label());
-                }
-            }
-        });
-    }
+    long id = header.id;
+    // === 自用精简版:去掉了 R.id.various 和 R.id.system_framework 特殊判断 ===
+    if (holder == null || TextUtils.isEmpty(header.summary)) return;
+    // 快速滚动时跳过异步图标加载，停止后会通过 notifyDataSetChanged 重新 bind
+    if (mIsScrolling) return;
+    String packageName = header.summary.toString();
+    int headerIconSize = mContext.getResources().getDimensionPixelSize(R.dimen.header_icon_size);
+    IconTitleLoader.load(mContext, packageName, headerIconSize, (info) -> {
+        if (holder.getBindingAdapterPosition() != RecyclerView.NO_POSITION) {
+            holder.icon.setImageDrawable(info.icon());
+            holder.title.setText(info.label());
+        }
+    });
+}
+
 }
