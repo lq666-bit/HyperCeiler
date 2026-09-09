@@ -1,7 +1,8 @@
 # 个人精简版构建工作流
-# - 只构建 Debug APK(走 debug 签名)
+# - 只构建 Debug APK(走 debug 签名,无需任何 signing.properties)
 # - APK 内代码完整保留,但运行时只加载状态栏相关 Hook(由 XposedInitEntry.java 中的过滤逻辑保证)
 # - 需要 GitHub Secrets: GPR_USER(lq666-bit)、GPR_KEY(带 read:packages 的 PAT)
+# - 凭据通过环境变量传给 Gradle,不创建 signing.properties(避免触发文件加载逻辑)
 # - 触发方式:push 到 main 分支 或 手动触发
 name: Build Personal (StatusBar Only)
 
@@ -35,16 +36,13 @@ jobs:
         with:
           cache-overwrite-existing: true
 
-      - name: 创建 signing.properties(GPR 凭据从 Secrets 读取)
+      - name: 清理可能的残留 signing.properties
+        run: rm -f signing.properties
+
+      - name: 构建 Debug APK
         env:
           GPR_USER: ${{ secrets.GPR_USER }}
           GPR_KEY: ${{ secrets.GPR_KEY }}
-        run: |
-          echo "gpr.user=${GPR_USER}" >> signing.properties
-          echo "gpr.key=${GPR_KEY}" >> signing.properties
-          echo "(signing.properties 内容已生成)"
-
-      - name: 构建 Debug APK
         run: ./gradlew assembleDebug
 
       - name: 重命名 APK
